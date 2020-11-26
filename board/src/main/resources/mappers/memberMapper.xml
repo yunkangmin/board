@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- tbl_member 테이블관련 mapper 파일. -->
+<!-- mapper 파일에서 사용하는 태그들을 위한 DTD추가 -->
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+<mapper namespace="org.tams.mapper.MemberMapper">
+  <!-- 현재시간 출력. -->
+  <select id="getTime" resultType="string">
+  select now()
+  </select>
+  
+  <!-- 멤버 추가 -->
+  <insert id="insertMember" >
+  insert into tbl_member (userid,userpw, username, email) values
+  (#{userid}, #{userpw}, #{username}, #{email})
+  </insert>
+	
+  <!-- 아이디에 해당하는 멤버조회  -->	
+  <select id="selectMember" 
+          resultType="org.tams.domain.MemberVO">
+  select 
+    * 
+  from 
+    tbl_member 
+  where userid = #{userid}
+  </select>
+  
+  <!-- 로그인 확인. 아이디와 비밀번호에 해당하는 멤버가 있는지.  -->	
+  <select id="readWithPW" 
+         resultType="org.tams.domain.MemberVO">
+  select 
+    * 
+  from 
+    tbl_member 
+  where 
+    userid = #{userid} and userpw = #{userpw}
+  </select>
+  
+  
+</mapper>  
+

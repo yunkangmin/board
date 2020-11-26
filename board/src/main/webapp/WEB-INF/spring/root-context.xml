@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 웹 자원과 관련되지 않은 설정을 한다. -->
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-4.3.xsd
+		http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd
+		http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+	
+	<!-- 
+		aop proxy 객체 생성을 위한 설정.
+	 	AspectJ 라이브러리를 이용해서 Proxy 객체를 생성해낸다.
+	-->
+	<aop:aspectj-autoproxy></aop:aspectj-autoproxy>
+	
+	<!-- 
+		데이터베이스 연결을 위해 spring-jdbc 모듈에 있는 dataSource를 사용하여 DB 커넥션정보를 생성한다. 
+		log4jdbc-log4j2(마이바티스 sql을 보기 위함)사용 . 이를 위해서 log4jdbc.log4j2.properties과 logback.xml이 필요하다.
+	-->
+	<bean id="dataSource" 
+	      class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName" value="net.sf.log4jdbc.sql.jdbcapi.DriverSpy"></property>
+		<property name="url" value="jdbc:log4jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false"></property>
+		<property name="username" value="admin"></property>
+		<property name="password" value="121314"></property>
+	</bean>	
+	
+	<!-- MyBatis와 Spring 연동시 사용. connection을 생성함. -->
+	<!-- MyBatis-Spring 모듈필요. -->
+	<!-- 스프링이 로딩될 때 같이 로딩되도록 설정한다. 마이바티스 설정파일.-->
+	<!-- 마이바티스가 mapper파일을 인식하도록 mapper파일 경로 지정-->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+	 	<property name="dataSource" ref="dataSource" />
+ 	 	<property name="configLocation" value="classpath:/mybatis-config.xml"></property>
+ 		<property name="mapperLocations" value="classpath:mappers/**/*Mapper.xml"></property>	
+	</bean>
+	
+	<!-- 
+		SqlSessionTemplate은 DAO 작업에서 데이터베이스와 연결을 맺고, 작업이 완료된 후에 연결을 close()하는 부분을 처리한다.
+		SqlSessionTemplate은 SqlSession 인터페이스를 구현한 클래스이고 기본적인 트랜잭션 관리나 쓰레드 처리의 안정성 등을 보장해주고, 데이터베이스
+		의 연결과 종료를 책임진다.
+	 -->
+	<bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate" destroy-method="clearCache">
+	  <constructor-arg name="sqlSessionFactory" ref="sqlSessionFactory"></constructor-arg>
+	</bean>
+	
+	<!-- org.tams.persistence에 있는 클래스가 빈으로 등록되면 클래스 파일에 S가 보인다. -->
+	<context:component-scan base-package="org.tams.persistence"/>
+	<context:component-scan base-package="org.tams.service"/>	
+	<context:component-scan base-package="org.tams.aop"/>
+	
+	<!-- 트랜잭션 처리를 위해 필요 -->
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+	
+	<!-- 
+		트랜잭션 처리를 위해 필요. 
+		@Transactional 애노테이션을 이용한 트랜잭션의 관리가 가능하게 해준다.
+		@Transactional은 서비스 클래스에 사용한다.
+	 -->
+	<tx:annotation-driven />
+	
+</beans>

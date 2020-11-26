@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+	tbl_board 테이블관련 mapper 파일. 
+	각 SQL 문의 id 값은  dao인터페이스와 동일하게 설정해서 혼란이 없도록 한다.
+-->
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.tams.mapper.BoardMapper">
+
+<!-- 페이징 처리전 게시글 등록 -->
+ <insert id="create">
+ insert into tbl_board (title, content, writer) 
+ values(#{title},#{content}, #{writer})
+ </insert>
+ 
+<!-- 페이징 처리전 게시글 조회 -->
+ <select id="read" resultType="org.tams.domain.BoardVO">
+ select 
+   bno, title, content, writer, regdate, viewcnt , replycnt
+ from 
+   tbl_board 
+ where bno = #{bno}
+ </select>
+
+<!-- 페이징 처리전 게시글 수정 -->
+ <update id="update">
+ update tbl_board set title =#{title}, content =#{content} 
+ where bno = #{bno}
+ </update>
+
+<!--페이징 처리전  게시글 삭제 -->
+ <delete id="delete">
+ delete from tbl_board where bno = #{bno}
+ </delete>
+
+<!-- 페이징 처리전 게시글 목록 조회 -->
+ <select id="listAll" resultType="org.tams.domain.BoardVO">
+ <![CDATA[
+ select 
+   bno, title, content, writer, regdate, viewcnt 
+ from 
+   tbl_board 
+ where bno > 0 
+ order by bno desc, regdate desc
+ ]]>  
+ </select>
+ 
+<!-- 
+	*******************위에는 페이징 처리 전 아래는 페이징 처리 후********************
+ -->
+ 
+ <!-- 
+ 	페이징 처리됨. 
+ 	요청한 page를 가지고 SQL의 시작페이지 부분을 계산한 값이 #{page}에 들어간다. 
+ 	Criteria 클래스 생성전 쿼리.  
+ -->
+ <select id="listPage" resultType="BoardVO">
+ <![CDATA[
+ select 
+   bno, title, content, writer, regdate, viewcnt 
+ from 
+   tbl_board 
+ where bno > 0 
+ order by bno desc, regdate desc
+ limit #{page}, 10
+ ]]>  
+ </select>
+ 
+<!--   
+	id는 DAO 인터페이스와 동일하게 설정한다. 
+	Criteria 클래스(파라미터 관리를 쉽게하기 위해 생성한 클래스)를 사용하여 페이징 처리된 목록을 가져오는 쿼리.
+	Criteria의  pageStart와 perPageNum을  SQL 파라미터로 세팅한다. 
+ -->
+	<select id="listCriteria" resultType="BoardVO">
+ <![CDATA[
+ select 
+   bno, title, content, writer, regdate, viewcnt , replycnt
+ from 
+   tbl_board 
+ where bno > 0 
+ order by bno desc, regdate desc
+ limit #{pageStart}, #{perPageNum}
+ ]]>
+	</select>
+ 
+ <!-- 전체 게시글 개수를 가져온다. 하단에 페이징 처리를 위해 필요하다.  -->
+ <select id="countPaging" resultType="int">
+ <![CDATA[
+ select 
+   count(bno) 
+ from 
+   tbl_board 
+ where 
+   bno > 0 
+ ]]>
+ </select>
+
+
+<!-- sql 태그를 사용하면 sql을 재사용할 수 있다. -->
+<sql id="search">
+ <if test="searchType != null" > 
+   <if test="searchType == 't'.toString()">
+     and title like CONCAT('%', #{keyword}, '%')
+   </if>
+   <if test="searchType == 'c'.toString()">
+     and content like CONCAT('%', #{keyword}, '%')
+   </if>
+   <if test="searchType == 'w'.toString()">
+     and writer like CONCAT('%', #{keyword}, '%')
+   </if>     
+   <if test="searchType == 'tc'.toString()">
+     and ( title like CONCAT('%', #{keyword}, '%') OR content like CONCAT('%', #{keyword}, '%'))
+   </if>        
+   <if test="searchType == 'cw'.toString()">
+     and ( content like CONCAT('%', #{keyword}, '%') OR writer like CONCAT('%', #{keyword}, '%'))
+   </if>        
+   <if test="searchType == 'tcw'.toString()">
+     and (   title like CONCAT('%', #{keyword}, '%') 
+           OR 
+             content like CONCAT('%', #{keyword}, '%') 
+           OR 
+             writer like CONCAT('%', #{keyword}, '%'))
+   </if>              
+ </if>  
+</sql>
+ 
+<!-- 검색기능이 추가되었고 요청한 페이지에 해당하는 게시글을 가져온다.  -->
+<select id="listSearch" resultType="BoardVO">
+<![CDATA[  
+  select * 
+  from tbl_board 
+  where bno > 0 
+]]>  
+
+  <include refid="search"></include>
+  
+<![CDATA[    
+  order by bno desc
+  limit #{pageStart}, #{perPageNum}
+]]>  
+</select>
+  
+<!-- 검색기능이 추가되었고 검색에 따른 전체 게시글 개수를 구한다.  -->
+<select id="listSearchCount" resultType="int">
+<![CDATA[  
+  select count(bno) 
+  from tbl_board 
+  where bno > 0 
+]]>
+  <include refid="search"></include>
+ 
+</select>  
+
+<!-- 
+	게시판에 댓글이 추가될 때 댓글 개수 컬럼에 1을 증가시킨다.
+-->
+<update id="updateReplyCnt">
+  update tbl_board set replycnt = replycnt + #{amount} where bno = #{bno}
+</update>
+
+<!-- 게시글 조회수 증가 쿼리 -->
+<update id="updateViewCnt">
+  update tbl_board set viewcnt = viewcnt +1 where bno = #{bno}
+</update>
+
+<!-- 
+게시물 등록 시 첨부파일 등록 쿼리. mysql은 LAST_INSERT_ID()(바로 직전에 등록된 번호)함수로 
+tlb_board 테이블에 auto_increment로 설정되어 있는 bno값을  가져올 수 있다.
+-->
+<insert id="addAttach">
+insert into tbl_attach(fullname, bno) values (#{fullName}, LAST_INSERT_ID())
+</insert> 
+
+<!-- 게시글 조회 시 첨부 파일 가져오기 -->
+<select id="getAttach" resultType="string">
+select fullname from tbl_attach where bno = #{bno} order by regdate
+</select> 
+
+<!-- 게시물 수정 시 첨부파일 삭제 -->
+<delete id="deleteAttach">
+delete from tbl_attach where bno = #{bno}
+</delete>
+
+<!-- 게시물 수정 시 새로운 첨부파일 추가 -->
+<insert id="replaceAttach">
+insert into tbl_attach(fullname, bno) values (#{fullName}, #{bno})
+</insert>
+ 
+</mapper>
